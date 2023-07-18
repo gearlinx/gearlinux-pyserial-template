@@ -1,0 +1,34 @@
+# build and push images on every change
+
+name: Build container images for all architectures and push to ghcr.io
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - '*'
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          # required for versioning with git describe
+          fetch-depth: "0"
+
+      - name: Build images
+        run: |
+          make multiarch
+
+      - name: Log in to registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Push images
+        run: |
+          make push IMAGE_NAME="ghcr.io/${{ github.repository }}"
